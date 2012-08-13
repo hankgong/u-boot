@@ -118,8 +118,9 @@
 		"ethprime=FEC0\0"					\
 		"uboot=u-boot.bin\0"			\
 		"kernel=uImage\0"				\
+		"hdmi=video=mxcdi0fb:RGB24,1920x1080M@60 hdmi di0_primary\0"   \
 		"nfsroot=/opt/eldk/arm\0"				\
-		"bootargs_base=setenv bootargs console=ttymxc0,115200\0"\
+		"bootargs_base=setenv bootargs console=ttymxc0,115200 ${hdmi} consoleblank=0\0"\
 		"bootargs_nfs=setenv bootargs ${bootargs} root=/dev/nfs "\
 			"ip=dhcp nfsroot=${serverip}:${nfsroot},v3,tcp\0"\
 		"bootcmd_net=run bootargs_base bootargs_nfs; "		\
