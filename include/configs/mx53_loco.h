@@ -95,6 +95,15 @@
 #define CONFIG_BOOTP_GATEWAY
 #define CONFIG_BOOTP_DNS
 
+/* Enable below configure when supporting nand */
+#define CONFIG_CMD_NAND
+#define CONFIG_MXC_NAND
+/* NAND FLASH driver setup */
+#define CONFIG_SYS_NAND_MAX_CHIPS     1
+#define CONFIG_SYS_MAX_NAND_DEVICE    1
+#define CONFIG_SYS_NAND_BASE          (0x40000000)
+#define CONFIG_NAND_FW_16BIT    0 /* 1: 16bit 0: 8bit */
+
 #define CONFIG_CMD_MMC
 #define CONFIG_CMD_ENV
 
@@ -118,8 +127,8 @@
 		"ethprime=FEC0\0"					\
 		"uboot=u-boot.bin\0"			\
 		"kernel=uImage\0"				\
-		"hdmi=video=mxcdi0fb:RGB24,1920x1080M@60 hdmi di0_primary\0"   \
 		"nfsroot=/opt/eldk/arm\0"				\
+		"hdmi=video=mxcdi0fb:RGB24,1920x1080M@60 hdmi di0_primary\0"\
 		"bootargs_base=setenv bootargs console=ttymxc0,115200 ${hdmi} consoleblank=0\0"\
 		"bootargs_nfs=setenv bootargs ${bootargs} root=/dev/nfs "\
 			"ip=dhcp nfsroot=${serverip}:${nfsroot},v3,tcp\0"\
@@ -140,7 +149,7 @@
  * Miscellaneous configurable options
  */
 #define CONFIG_SYS_LONGHELP		/* undef to save memory */
-#define CONFIG_SYS_PROMPT		"MX53-LOCO U-Boot > "
+#define CONFIG_SYS_PROMPT		"DA Media Appliance U-Boot > "
 #define CONFIG_AUTO_COMPLETE
 #define CONFIG_SYS_CBSIZE		256	/* Console I/O Buffer Size */
 /* Print Buffer Size */
@@ -199,7 +208,7 @@
 	#define CONFIG_MMC				1
 	#define CONFIG_GENERIC_MMC
 	#define CONFIG_IMX_MMC
-	#define CONFIG_SYS_FSL_ESDHC_NUM        2
+	#define CONFIG_SYS_FSL_ESDHC_NUM        1
 	#define CONFIG_SYS_FSL_ESDHC_ADDR       0
 	#define CONFIG_SYS_MMC_ENV_DEV  0
 	#define CONFIG_DOS_PARTITION	1
@@ -237,6 +246,21 @@
 /*-----------------------------------------------------------------------
  * Physical Memory Map
  */
+ /*#define CONFIG_NR_DRAM_BANKS	1
+ #define PHYS_SDRAM_1		CSD0_BASE_ADDR
+ #define PHYS_SDRAM_1_SIZE	(512 * 1024 * 1024)
+ #define iomem_valid_addr(addr, size) \
+ 	(addr >= PHYS_SDRAM_1 && addr <= (PHYS_SDRAM_1 + PHYS_SDRAM_1_SIZE))*/
+ 	
+/*#define CONFIG_NR_DRAM_BANKS	1
+#define PHYS_SDRAM_1		CSD0_BASE_ADDR
+#define PHYS_SDRAM_1_SIZE	(512 * 1024 * 1024)
+#define PHYS_SDRAM_2		0
+#define PHYS_SDRAM_2_SIZE	0
+#define iomem_valid_addr(addr, size) \
+	((addr >= PHYS_SDRAM_1 && addr <= (PHYS_SDRAM_1 + PHYS_SDRAM_1_SIZE)) \
+	|| (addr >= PHYS_SDRAM_2 && addr <= (PHYS_SDRAM_2 + PHYS_SDRAM_2_SIZE)))*/	 
+ 
 #define CONFIG_NR_DRAM_BANKS	2
 #define PHYS_SDRAM_1		CSD0_BASE_ADDR
 #define PHYS_SDRAM_1_SIZE	(512 * 1024 * 1024)
