@@ -321,6 +321,11 @@ static void setup_i2c(unsigned int module_base)
 
 void setup_pmic_voltages(void)
 {
+	int value;
+   i2c_init(CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE);
+   /* increase VDDGP as 1.2V for 1GHZ */
+   value = 0x5c;
+   i2c_write(0x48, 0x2e, 1, &value, 1);
 }
 
 /* Note: udelay() is not accurate for i2c timing */
@@ -479,22 +484,105 @@ static void setup_sata_device(void)
 	u32 *tmp_base =
 		(u32 *)(IIM_BASE_ADDR + 0x180c);
 	u32 reg;
-	mxc_request_iomux(MX53_PIN_EIM_DA3, IOMUX_CONFIG_ALT1);
+	/*mxc_request_iomux(MX53_PIN_EIM_DA3, IOMUX_CONFIG_ALT1);
 
 	/* GPIO_3_3 */
-	reg = readl(GPIO3_BASE_ADDR);
+	/*reg = readl(GPIO3_BASE_ADDR);
 	reg |= (0x1 << 3);
 	writel(reg, GPIO3_BASE_ADDR);
 
 	reg = readl(GPIO3_BASE_ADDR + 0x4);
 	reg |= (0x1 << 3);
-	writel(reg, GPIO3_BASE_ADDR + 0x4);
+	writel(reg, GPIO3_BASE_ADDR + 0x4);*/
 
 	udelay(1000);
 
 	/* Set USB_PHY1 clk, fuse bank4 row3 bit2 */
 	set_usb_phy1_clk();
 	writel((readl(tmp_base) & (~0x7)) | 0x4, tmp_base);
+}
+#endif
+
+#ifdef CONFIG_IMX_ECSPI
+s32 spi_get_cfg(struct imx_spi_dev_t *dev)
+{
+	switch (dev->slave.cs) {
+	case 0:
+		/* pmic */
+		dev->base = CSPI1_BASE_ADDR;
+		dev->freq = 2500000;
+		dev->ss_pol = IMX_SPI_ACTIVE_HIGH;
+		dev->ss = 0;
+		dev->fifo_sz = 64 * 4;
+		dev->us_delay = 0;
+		break;
+	case 1:
+		/* spi_nor */
+		dev->base = CSPI1_BASE_ADDR;
+		dev->freq = 2500000;
+		dev->ss_pol = IMX_SPI_ACTIVE_LOW;
+		dev->ss = 1;
+		dev->fifo_sz = 64 * 4;
+		dev->us_delay = 0;
+		break;
+	default:
+		printf("Invalid Bus ID!\n");
+		break;
+	}
+
+	return 0;
+}
+
+void spi_io_init(struct imx_spi_dev_t *dev)
+{
+	switch (dev->base) {
+	case CSPI1_BASE_ADDR:
+		/* Select mux mode: ALT4 mux port: MOSI of instance: ecspi1 */
+		mxc_request_iomux(MX53_PIN_EIM_D18, IOMUX_CONFIG_ALT4);
+		mxc_iomux_set_pad(MX53_PIN_EIM_D18, 0x104);
+		mxc_iomux_set_input(
+				MUX_IN_ECSPI1_IPP_IND_MOSI_SELECT_INPUT, 0x3);
+
+		/* Select mux mode: ALT4 mux port: MISO of instance: ecspi1. */
+		mxc_request_iomux(MX53_PIN_EIM_D17, IOMUX_CONFIG_ALT4);
+		mxc_iomux_set_pad(MX53_PIN_EIM_D17, 0x104);
+		mxc_iomux_set_input(
+				MUX_IN_ECSPI1_IPP_IND_MISO_SELECT_INPUT, 0x3);
+
+		if (dev->ss == 0) {
+			/* de-select SS1 of instance: ecspi1. */
+			mxc_request_iomux(MX53_PIN_EIM_D19, IOMUX_CONFIG_ALT1);
+			mxc_iomux_set_pad(MX53_PIN_EIM_D19, 0x1E4);
+
+			/* mux mode: ALT4 mux port: SS0 of instance: ecspi1. */
+			mxc_request_iomux(MX53_PIN_EIM_EB2, IOMUX_CONFIG_ALT4);
+			mxc_iomux_set_pad(MX53_PIN_EIM_EB2, 0x104);
+			mxc_iomux_set_input(
+				MUX_IN_ECSPI1_IPP_IND_SS_B_1_SELECT_INPUT, 0x3);
+		} else if (dev->ss == 1) {
+			/* de-select SS0 of instance: ecspi1. */
+			mxc_request_iomux(MX53_PIN_EIM_EB2, IOMUX_CONFIG_ALT1);
+			mxc_iomux_set_pad(MX53_PIN_EIM_EB2, 0x1E4);
+
+			/* mux mode: ALT0 mux port: SS1 of instance: ecspi1. */
+			mxc_request_iomux(MX53_PIN_EIM_D19, IOMUX_CONFIG_ALT4);
+			mxc_iomux_set_pad(MX53_PIN_EIM_D19, 0x104);
+			mxc_iomux_set_input(
+				MUX_IN_ECSPI1_IPP_IND_SS_B_2_SELECT_INPUT, 0x2);
+		}
+
+		/* Select mux mode: ALT0 mux port: SCLK of instance: ecspi1. */
+		mxc_request_iomux(MX53_PIN_EIM_D16, IOMUX_CONFIG_ALT4);
+		mxc_iomux_set_pad(MX53_PIN_EIM_D16, 0x104);
+		mxc_iomux_set_input(
+			MUX_IN_CSPI_IPP_CSPI_CLK_IN_SELECT_INPUT, 0x3);
+		break;
+
+	case CSPI2_BASE_ADDR:
+	default:
+
+		break;
+	}
 }
 #endif
 
@@ -696,6 +784,104 @@ int board_mmc_init(bd_t *bis)
 #endif
 
 
+void setup_nfc(void)
+{
+	u32 i, reg;
+	#define M4IF_GENP_WEIM_MM_MASK          0x00000001
+	#define WEIM_GCR2_MUX16_BYP_GRANT_MASK  0x00001000
+
+	reg = __raw_readl(M4IF_BASE_ADDR + 0xc);
+	reg &= ~M4IF_GENP_WEIM_MM_MASK;
+	__raw_writel(reg, M4IF_BASE_ADDR + 0xc);
+	for (i = 0x4; i < 0x94; i += 0x18) {
+		reg = __raw_readl(WEIM_BASE_ADDR + i);
+		reg &= ~WEIM_GCR2_MUX16_BYP_GRANT_MASK;
+		__raw_writel(reg, WEIM_BASE_ADDR + i);
+	}
+
+	/* To be compatible with some old NAND flash,
+	 * limit NFC clocks as 34MHZ. The user can modify
+	 * it according to dedicate NAND flash
+	 */
+	clk_config(0, 34, NFC_CLK);
+
+	mxc_request_iomux(MX53_PIN_NANDF_CS0,
+			IOMUX_CONFIG_ALT0);
+	mxc_iomux_set_pad(MX53_PIN_NANDF_CS0,
+			PAD_CTL_DRV_HIGH);
+	mxc_request_iomux(MX53_PIN_NANDF_CS1,
+			IOMUX_CONFIG_ALT0);
+	mxc_iomux_set_pad(MX53_PIN_NANDF_CS1,
+			PAD_CTL_DRV_HIGH);
+	mxc_request_iomux(MX53_PIN_NANDF_RB0,
+			IOMUX_CONFIG_ALT0);
+	mxc_iomux_set_pad(MX53_PIN_NANDF_RB0,
+			PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PULL |
+			PAD_CTL_100K_PU);
+	mxc_request_iomux(MX53_PIN_NANDF_CLE,
+			IOMUX_CONFIG_ALT0);
+	mxc_iomux_set_pad(MX53_PIN_NANDF_CLE,
+			PAD_CTL_DRV_HIGH);
+	mxc_request_iomux(MX53_PIN_NANDF_ALE,
+			IOMUX_CONFIG_ALT0);
+	mxc_iomux_set_pad(MX53_PIN_NANDF_ALE,
+			PAD_CTL_DRV_HIGH);
+	mxc_request_iomux(MX53_PIN_NANDF_WP_B,
+			IOMUX_CONFIG_ALT0);
+	mxc_iomux_set_pad(MX53_PIN_NANDF_WP_B,
+			PAD_CTL_PKE_ENABLE | PAD_CTL_PUE_PULL |
+			PAD_CTL_100K_PU);
+	mxc_request_iomux(MX53_PIN_NANDF_RE_B,
+			IOMUX_CONFIG_ALT0);
+	mxc_iomux_set_pad(MX53_PIN_NANDF_RE_B,
+			PAD_CTL_DRV_HIGH);
+	mxc_request_iomux(MX53_PIN_NANDF_WE_B,
+			IOMUX_CONFIG_ALT0);
+	mxc_iomux_set_pad(MX53_PIN_NANDF_WE_B,
+			PAD_CTL_DRV_HIGH);
+	mxc_request_iomux(MX53_PIN_EIM_DA0,
+			IOMUX_CONFIG_ALT0);
+	mxc_iomux_set_pad(MX53_PIN_EIM_DA0,
+			PAD_CTL_PKE_ENABLE | PAD_CTL_100K_PU |
+			PAD_CTL_DRV_HIGH);
+	mxc_request_iomux(MX53_PIN_EIM_DA1,
+			IOMUX_CONFIG_ALT0);
+	mxc_iomux_set_pad(MX53_PIN_EIM_DA1,
+			PAD_CTL_PKE_ENABLE | PAD_CTL_100K_PU |
+			PAD_CTL_DRV_HIGH);
+	mxc_request_iomux(MX53_PIN_EIM_DA2,
+			IOMUX_CONFIG_ALT0);
+	mxc_iomux_set_pad(MX53_PIN_EIM_DA2,
+			PAD_CTL_PKE_ENABLE | PAD_CTL_100K_PU |
+			PAD_CTL_DRV_HIGH);
+	mxc_request_iomux(MX53_PIN_EIM_DA3,
+			IOMUX_CONFIG_ALT0);
+	mxc_iomux_set_pad(MX53_PIN_EIM_DA3,
+			PAD_CTL_PKE_ENABLE | PAD_CTL_100K_PU |
+			PAD_CTL_DRV_HIGH);
+	mxc_request_iomux(MX53_PIN_EIM_DA4,
+			IOMUX_CONFIG_ALT0);
+	mxc_iomux_set_pad(MX53_PIN_EIM_DA4,
+			PAD_CTL_PKE_ENABLE | PAD_CTL_100K_PU |
+			PAD_CTL_DRV_HIGH);
+	mxc_request_iomux(MX53_PIN_EIM_DA5,
+			IOMUX_CONFIG_ALT0);
+	mxc_iomux_set_pad(MX53_PIN_EIM_DA5,
+			PAD_CTL_PKE_ENABLE | PAD_CTL_100K_PU |
+			PAD_CTL_DRV_HIGH);
+	mxc_request_iomux(MX53_PIN_EIM_DA6,
+			IOMUX_CONFIG_ALT0);
+	mxc_iomux_set_pad(MX53_PIN_EIM_DA6,
+			PAD_CTL_PKE_ENABLE | PAD_CTL_100K_PU |
+			PAD_CTL_DRV_HIGH);
+	mxc_request_iomux(MX53_PIN_EIM_DA7,
+			IOMUX_CONFIG_ALT0);
+	mxc_iomux_set_pad(MX53_PIN_EIM_DA7,
+			PAD_CTL_PKE_ENABLE | PAD_CTL_100K_PU |
+			PAD_CTL_DRV_HIGH);
+}
+
+
 int board_init(void)
 {
 #ifdef CONFIG_MFG
@@ -714,7 +900,9 @@ int board_init(void)
 	gd->bd->bi_boot_params = PHYS_SDRAM_1 + 0x100;
 
 	setup_uart();
+	
 
+	
 #ifdef CONFIG_MXC_FEC
 	setup_fec();
 #endif
@@ -725,15 +913,19 @@ int board_init(void)
     /* delay pmic i2c access to board_late_init()
        due to i2c_probe fail here on loco/ripley board. */
 	/* Increase VDDGP voltage */
-	/* setup_pmic_voltages(); */
+	 setup_pmic_voltages(); 
 	/* Switch to 1GHZ */
-	/* clk_config(CONFIG_REF_CLK_FREQ, 1000, CPU_CLK); */
+	 clk_config(CONFIG_REF_CLK_FREQ, 1000, CPU_CLK);
 #endif
+
+	
 
 #if defined(CONFIG_DWC_AHSATA)
 	setup_sata_device();
 #endif
 
+	setup_nfc();	
+	
 	return 0;
 }
 
@@ -1203,20 +1395,22 @@ int board_late_init(void)
 	} else
 		printf("Error: Dont't found mc34708 or da9052 on board.\n");
 
+	
+
 	return 0;
 }
 
 int checkboard(void)
 {
 	printf("Board: ");
-	printf("MX53-LOCO 1.0 ");
+	printf("DA MEDIA APPLIANCE ");
 	switch (get_board_rev_from_fuse()) {
 	case 0x3:
 		printf("Rev. B\n");
 		break;
 	case 0x1:
 	default:
-		printf("Rev. A\n");
+		printf("Rev. 1.0\n");
 		break;
 	}
 	printf("Boot Reason: [");
