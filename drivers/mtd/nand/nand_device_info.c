@@ -499,6 +499,31 @@ static struct nand_device_info nand_device_info_table_type_2[] =
 	{
 	.end_of_table             = false,
 	.manufacturer_code        = 0x2c,
+	.device_code              = 0x38,
+	.cell_technology          = NAND_DEVICE_CELL_TECH_SLC,
+	.chip_size_in_bytes       = 1LL*SZ_1G,
+	.block_size_in_pages      = 128,
+	/*
+	 * TODO: The actual oob size for MT29F8G08ABABA is
+	 * 224 bytes. Use oob 218 bytes since MX53 NFC controller
+	 * mentions the spare area size must be less or equal 218
+	 * byte if ECC is enabled
+	 */
+	 .page_total_size_in_bytes = 4*SZ_1K + 218,
+	 .ecc_strength_in_bits     = 4,
+	 .ecc_size_in_bytes        = 512,
+	 .data_setup_in_ns         = 15,
+	 .data_hold_in_ns          = 10,
+	 .address_setup_in_ns      = 20,
+	 .gpmi_sample_delay_in_ns  = 6,
+	 .tREA_in_ns               = 20,
+	 .tRLOH_in_ns              = 5,
+	 .tRHOH_in_ns              = 15,
+	 "MT29F8G08ABABA(1GB)",
+	},
+	{
+	.end_of_table             = false,
+	.manufacturer_code        = 0x2c,
 	.device_code              = 0x48,
 	.cell_technology          = NAND_DEVICE_CELL_TECH_SLC,
 	.chip_size_in_bytes       = 2LL*SZ_1G,
@@ -955,6 +980,25 @@ static struct nand_device_info nand_device_info_table_type_7[] =
 	.tRLOH_in_ns              = -1,
 	.tRHOH_in_ns              = -1,
 	"MT29F4G08AAA",
+	},
+	{
+	.end_of_table             = false,
+	.manufacturer_code        = 0x2c,
+	.device_code              = 0xda,
+	.cell_technology          = NAND_DEVICE_CELL_TECH_SLC,
+	.chip_size_in_bytes       = 256LL*SZ_1M,
+	.block_size_in_pages      = 64,
+	.page_total_size_in_bytes = 2*SZ_1K + 64,
+	.ecc_strength_in_bits     = 4,
+	.ecc_size_in_bytes        = 512,
+	.data_setup_in_ns         = 20,
+	.data_hold_in_ns          = 10,
+	.address_setup_in_ns      = 10,
+	.gpmi_sample_delay_in_ns  = 6,
+	.tREA_in_ns               = -1,
+	.tRLOH_in_ns              = -1,
+	.tRHOH_in_ns              = -1,
+	"MT29F2G08",
 	},
 	{
 	.end_of_table             = false,

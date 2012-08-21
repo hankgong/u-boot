@@ -364,10 +364,6 @@ void start_armboot (void)
 	}
 #endif /* CONFIG_LCD */
 
-#if defined(CONFIG_CMD_NAND)
-	puts ("NAND:  ");
-	nand_init();		/* go init the NAND */
-#endif
 
 #if defined(CONFIG_CMD_ONENAND)
 	onenand_init();
@@ -463,6 +459,11 @@ extern void davinci_eth_set_mac_addr (const u_int8_t *addr);
 	if ((s = getenv ("bootfile")) != NULL) {
 		copy_filename (BootFile, s, sizeof (BootFile));
 	}
+#endif
+
+#if defined(CONFIG_CMD_NAND)
+	puts ("NAND:  ");
+	nand_init();		/* go init the NAND */
 #endif
 
 #ifdef BOARD_LATE_INIT
