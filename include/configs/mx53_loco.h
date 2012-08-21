@@ -139,6 +139,10 @@
 		"bootcmd_mmc=run bootargs_base bootargs_mmc; "		\
 			"mmc dev 0; "					\
 			"mmc read ${loadaddr} 0x800 0x1800; bootm\0"	\
+		"bootargs_nand=setenv bootargs ${bootargs} ip=dhcp " \
+			"root=/dev/mtdblock2 rootfstype=jffs2 rw\0" \
+		"bootcmd_nand=run bootargs_base bootargs_nand; "\
+			"nand read ${loadaddr} 0x1000000 0x300000; bootm\0" \
 		"bootcmd=run bootcmd_mmc\0"	\
 	\
 
